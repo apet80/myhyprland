@@ -28,13 +28,10 @@ hl.on("hyprland.start", function ()
     -- Start waybar
     hl.exec_cmd(HOME .. "/.config/waybar/launch.sh")
 
-    -- Start polkit agent: prefer hyprpolkitagent.service (Ubuntu, via
-    -- packages-ubuntu -- its unit is WantedBy=graphical-session.target,
-    -- which Hyprland never activates, so start it explicitly), falling
-    -- back to polkit-gnome-authentication-agent-1 where that unit
-    -- doesn't exist. Only one should run -- starting both means
-    -- duplicate polkit auth dialogs.
-    hl.exec_cmd("systemctl --user start hyprpolkitagent.service 2>/dev/null || /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 || true")
+    -- Start polkit agent: KDE agent (pairs with pam_kwallet). Upstream's
+    -- hyprpolkitagent/polkit-gnome chain is not used -- running two agents
+    -- causes duplicate auth dialogs.
+    hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
 
     -- Restore wallpaper (skip for quickshell — handled inside ml4w-autostart)
     if wallpaper_app ~= "quickshell" then
@@ -62,6 +59,9 @@ hl.on("hyprland.start", function ()
 
     -- Load cliphist history
     hl.exec_cmd("wl-paste --watch cliphist store")
+
+    -- OpenRGB
+    hl.exec_cmd("/usr/bin/openrgb --startminimized --profile 'Rot Blau.orp'")
 
     -- Start autostart cleanup
     hl.exec_cmd("~/.config/hypr/scripts/cleanup.sh")
