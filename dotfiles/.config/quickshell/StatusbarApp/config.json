@@ -14,6 +14,11 @@ The global Opacity slider in the sidebar (Appearance) is stored separately in
 ~/.config/ml4w/settings/quickshell-opacity (0-100). When set, it overrides
 opacity.expanded; the collapsed pill keeps its ratio to the expanded opacity.
 The dock (ml4w-dock) follows the same file through its theme.opacityFile.
+
+bar.monitors controls which monitors get a bar:
+  []                  - first monitor only (default)
+  ["all"]              - every connected monitor
+  ["DP-1", "HDMI-A-1"] - an explicit list of monitor names (see `hyprctl monitors`)
 */
 {
     "bar": {
@@ -22,7 +27,8 @@ The dock (ml4w-dock) follows the same file through its theme.opacityFile.
         "enabled": true,
         "alwaysExpanded": true,
         "autohide": false,
-        "hideDelay": 400
+        "hideDelay": 400,
+        "monitors": []
     },
     "pill": {
         "collapsedWidth": 0,
