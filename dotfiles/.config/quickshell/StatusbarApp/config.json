@@ -9,6 +9,11 @@ StatusbarWindow.qml). The statusbar itself reads a single file:
 It is created empty on first start and merged over
 the built-in defaults below, so it only needs to carry the values you want to
 change. The statusbar writes enabled / alwaysExpanded / autohide back into it.
+
+bar.monitors controls which monitors get a bar:
+  []                  - first monitor only (default)
+  ["all"]              - every connected monitor
+  ["DP-1", "HDMI-A-1"] - an explicit list of monitor names (see `hyprctl monitors`)
 */
 {
     "bar": {
@@ -17,7 +22,8 @@ change. The statusbar writes enabled / alwaysExpanded / autohide back into it.
         "enabled": true,
         "alwaysExpanded": true,
         "autohide": false,
-        "hideDelay": 400
+        "hideDelay": 400,
+        "monitors": []
     },
     "pill": {
         "collapsedWidth": 0,
