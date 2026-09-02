@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Services.SystemTray
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import qs.CustomTheme
 
@@ -18,6 +19,24 @@ Rectangle {
     // to a light palette. The chip restores the dark substrate they expect,
     // under every icon, whatever its source.
     property bool chip: true
+
+    // Edge length of the icon drawn inside each 30px round hover target. Fed
+    // from config.json ("systemtray": { "iconSize": ... }).
+    property int iconSize: 20
+
+    // Flatten every tray icon to a single flat glyph in the bar's accent color
+    // (background color while hovered), so the tray matches the bar's own
+    // modules. Several common tray clients — nm-applet, firewall-applet — only
+    // publish a dark monochrome symbol that is nearly invisible on the dark
+    // bar; this makes them read at a glance. Set "systemtray": { "colorize":
+    // false } in config.json to render apps' real (multi-color) icons
+    // as-is instead.
+    property bool colorize: true
+
+    // True while the chip is actually painted (light palette). The icons and
+    // the hover circle then switch to the chip's contrasting color, since the
+    // accent they use otherwise is the chip's own color.
+    readonly property bool onChip: chip && Theme.isLight
 
     // Padding between the icon row and the chip edge. Held at the same value in
     // both palettes — the plate is only painted in light mode, but reserving
@@ -49,7 +68,7 @@ Rectangle {
     // that is the one case where the icons need a dark substrate under them. A
     // dark palette already provides it, so the chip stays out of the way there
     // rather than boxing in icons that read fine as they are.
-    color: (chip && Theme.isLight) ? Theme.primary : "transparent"
+    color: onChip ? Theme.primary : "transparent"
 
     Behavior on color {
         ColorAnimation { duration: 200 }
@@ -58,39 +77,74 @@ Rectangle {
     RowLayout {
         id: items
         anchors.centerIn: parent
-        // Tighter than the 14px the bar uses between modules: the chip already
-        // separates the tray from its neighbours visually.
-        spacing: 8
+        // The 30px hover targets already pad each icon, so the row itself only
+        // needs a small gap between them.
+        spacing: 4
 
         Repeater {
             model: SystemTray.items
 
-            delegate: MouseArea {
+            delegate: Rectangle {
                 id: trayItem
                 required property var modelData
 
-                implicitWidth: 20
-                implicitHeight: 20
+                implicitWidth: 30
+                implicitHeight: 30
+                radius: 15
                 Layout.alignment: Qt.AlignVCenter
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                readonly property bool active: mouseArea.containsMouse
+
+                // Same accent-filled circle the other bar modules show on hover
+                // (inverted on the chip, which is itself accent-colored).
+                color: active
+                    ? (tray.onChip ? Theme.on_primary : Theme.primary)
+                    : "transparent"
+                Behavior on color {
+                    ColorAnimation { duration: 500; easing.type: Easing.OutQuint }
+                }
 
                 Image {
                     anchors.centerIn: parent
                     source: trayItem.modelData.icon
-                    width: 18
-                    height: 18
-                    sourceSize.width: 18
-                    sourceSize.height: 18
+                    width: tray.iconSize
+                    height: tray.iconSize
+                    sourceSize.width: tray.iconSize
+                    sourceSize.height: tray.iconSize
                     fillMode: Image.PreserveAspectFit
+                    layer.enabled: tray.colorize
+                    layer.effect: MultiEffect {
+                        // Flatten the icon to a single flat accent-colored glyph.
+                        // brightness raises every non-transparent pixel toward white
+                        // first, so dark monochrome symbols (nm-applet,
+                        // firewall-applet) end up as bright as the solid ones rather
+                        // than a dim tinted shape; colorization then recolors the
+                        // whole thing to the bar's accent, following the icon's
+                        // alpha edges. On the chip the roles swap, so the glyph
+                        // contrasts with the plate.
+                        brightness: 0.5
+                        colorization: 1.0
+                        colorizationColor: tray.onChip
+                            ? (trayItem.active ? Theme.primary : Theme.on_primary)
+                            : (trayItem.active ? Theme.background : Theme.primary)
+                        Behavior on colorizationColor {
+                            ColorAnimation { duration: 500; easing.type: Easing.OutQuint }
+                        }
+                    }
                 }
 
-                onClicked: (mouse) => {
-                    if (mouse.button === Qt.LeftButton && !modelData.onlyMenu) {
-                        modelData.activate()
-                    } else if (modelData.hasMenu) {
-                        trayMenu.open()
+                MouseArea {
+                    id: mouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.LeftButton && !trayItem.modelData.onlyMenu) {
+                            trayItem.modelData.activate()
+                        } else if (trayItem.modelData.hasMenu) {
+                            trayMenu.open()
+                        }
                     }
                 }
 
