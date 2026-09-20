@@ -49,11 +49,6 @@ hl.on("hyprland.start", function ()
     -- Load GTK settings
     hl.exec_cmd("~/.config/hypr/scripts/gtk.sh")
 
-    -- Start swaync -- skipped where D-Bus activation is already set up
-    -- (marker written by post-ubuntu.sh), since an explicit exec-once
-    -- there raced with it and lost with "already running!".
-    hl.exec_cmd("[ -f ~/.config/ml4w/.swaync-dbus-activated ] || swaync")
-
     -- Start hypridle
     hl.exec_cmd("hypridle")
 
@@ -62,9 +57,6 @@ hl.on("hyprland.start", function ()
 
    -- Run kwallet init
     hl.exec_cmd("/usr/lib/pam_kwallet_init")
-
-    -- OpenRGB
-    hl.exec_cmd("flatpak run org.openrgb.OpenRGB --startminimized --profile 'Default.orp'")
 
     -- Start autostart cleanup
     hl.exec_cmd("~/.config/hypr/scripts/cleanup.sh")
