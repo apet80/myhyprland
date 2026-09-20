@@ -41,7 +41,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
         vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
         vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
-        vim.keymap.set("n", "<leader>f", function()
+        -- <leader>cf, not <leader>f: the latter is now the Telescope "find"
+        -- prefix (lua/plugins.lua) and would stall on 'timeoutlen'.
+        vim.keymap.set("n", "<leader>cf", function()
             vim.lsp.buf.format({ async = true })
         end, opts)
         vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)

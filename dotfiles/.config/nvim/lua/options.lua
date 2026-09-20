@@ -4,7 +4,7 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
-vim.opt.termguicolors = true      -- true color, required for tokyonight to render correctly
+vim.opt.termguicolors = true      -- true color, required for onedark to render correctly
 vim.opt.clipboard = "unnamedplus" -- share the system clipboard (wl-copy/xclip)
 vim.opt.undofile = true           -- persist undo history across sessions
 vim.opt.splitright = true         -- vertical splits open to the right
