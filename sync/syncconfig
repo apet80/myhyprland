@@ -1,15 +1,75 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+    cat <<USAGE
+Usage: $(basename "$0") [--no-pull] [--dry-run]
+
+Deploys dotfiles/.config/ from the checked-out branch to ~/.config.
+
+  --no-pull   Don't fetch/pull; deploy the local checkout as it is.
+  --dry-run   Show what rsync would copy without changing ~/.config.
+
+The pull only happens when it is a plain fast-forward. When the local branch
+is ahead of or has diverged from its remote (e.g. after rebasing on upstream
+and before force-pushing), or is not tracking one, the local checkout is
+deployed unchanged so a rebased branch can be tested before it is pushed.
+USAGE
+}
+
+DO_PULL=1
+RSYNC_DRY=()
+for arg in "$@"; do
+    case "$arg" in
+        --no-pull) DO_PULL=0 ;;
+        -n|--dry-run) RSYNC_DRY=(--dry-run) ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
+    esac
+done
+
 PROJECT_DIR="$HOME/projects/ml4wdotfiles"
 GIT_DIR="$PROJECT_DIR/dotfiles/.config"
 CFG_DIR="$HOME/.config"
 
 cd "$PROJECT_DIR"
-git pull
+
+branch=$(git symbolic-ref --quiet --short HEAD || echo "detached HEAD")
+if (( DO_PULL )); then
+    if ! git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+        echo ">> $branch has no remote tracking branch; deploying local checkout."
+    elif ! git fetch --quiet; then
+        echo ">> git fetch failed; deploying local checkout." >&2
+    else
+        read -r behind ahead < <(git rev-list --left-right --count '@{u}...HEAD')
+        if (( behind > 0 && ahead == 0 )); then
+            git pull --ff-only
+        elif (( behind > 0 )); then
+            echo ">> $branch has diverged from $(git rev-parse --abbrev-ref '@{u}')" \
+                "($ahead ahead, $behind behind), e.g. an unpushed rebase;" \
+                "deploying local checkout without pulling."
+        elif (( ahead > 0 )); then
+            echo ">> $branch is $ahead commit(s) ahead of its remote; deploying local checkout."
+        fi
+    fi
+fi
+echo ">> Deploying $branch @ $(git rev-parse --short HEAD)"
+
 cd "$GIT_DIR"
 
+# Files with uncommitted changes keep their current mtime (the time they were
+# edited), so testing local edits isn't undone by --update below treating them
+# as older than the live copy.
+declare -A dirty=()
+while IFS= read -r -d '' f; do
+    dirty["$f"]=1
+done < <(git diff --name-only -z --relative HEAD)
+if (( ${#dirty[@]} > 0 )); then
+    echo ">> ${#dirty[@]} file(s) with uncommitted changes are deployed as-is."
+fi
+
 git ls-files -z | while IFS= read -r -d '' f; do
+    [[ -n "${dirty[$f]:-}" ]] && continue
     # Letzten Commit-Zeitpunkt für genau diese Datei ermitteln
     ts=$(git log -1 --format="%ad" --date=unix -- "$f")
     if [[ -n "$ts" ]]; then
@@ -20,7 +80,7 @@ done
 BACKUP_DIR="$HOME/.cache/dotfiles-sync/backup-$(date +%Y%m%d-%H%M%S)"
 
 # .qml files under ~/.config are pure code, never edited or written to live
-# (unlike e.g. ml4w/settings/statusbar.json, which the running shell persists
+# (unlike e.g. the files under ml4w/settings/, which the ML4W apps persist
 # toggle state into). Force-overwrite them unconditionally rather than via
 # --update: a rebase can replay a commit with an author date that predates
 # when the file was last deployed (e.g. a feature branch merged after main was
@@ -35,14 +95,14 @@ BACKUP_DIR="$HOME/.cache/dotfiles-sync/backup-$(date +%Y%m%d-%H%M%S)"
 # ~/.local/share/quickshell-overview/ and matugen renders its colors there
 # (matugen/config.toml, templates.quickshell_overview), so no generated .qml
 # remains under ~/.config and the special-casing is gone.
-rsync -av --backup --backup-dir="$BACKUP_DIR" \
+rsync -av "${RSYNC_DRY[@]}" --backup --backup-dir="$BACKUP_DIR" \
     --include='*/' --include='*.qml' --exclude='*' \
     "$GIT_DIR/" "$CFG_DIR/"
 
 # Everything else (settings JSON, matugen-generated files, scripts, etc.)
 # keeps --update so files the running shell/matugen write to at runtime
 # aren't clobbered with the shipped defaults.
-rsync -av --update --backup --backup-dir="$BACKUP_DIR" \
+rsync -av "${RSYNC_DRY[@]}" --update --backup --backup-dir="$BACKUP_DIR" \
     --exclude='*.qml' \
     "$GIT_DIR/" "$CFG_DIR/"
 
