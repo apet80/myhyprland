@@ -91,7 +91,7 @@ BACKUP_DIR="$HOME/.cache/dotfiles-sync/backup-$(date +%Y%m%d-%H%M%S)"
 # Until ML4W 2.16 the Quickshell Overview shipped a matugen-generated
 # Appearance.colors.qml under ~/.config/quickshell/overview/common/ that had to
 # be kept on the --update path. As of 2.16 the Overview is installed separately
-# (setup/post-*.sh -> ml4w-quickshell-overview/install.sh) into
+# (setup/post.sh -> ml4w-quickshell-overview/install.sh) into
 # ~/.local/share/quickshell-overview/ and matugen renders its colors there
 # (matugen/config.toml, templates.quickshell_overview), so no generated .qml
 # remains under ~/.config and the special-casing is gone.
