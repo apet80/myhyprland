@@ -93,13 +93,44 @@ hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-
 hl.bind(mainMod .. " + Tab", hl.dsp.exec_cmd("qs -p ~/.local/share/quickshell-overview ipc call overview toggle"), { description = "Open Select Window Menu" })
 hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("~/.config/ml4w/themes/themes.sh"), { description = "Open Select Window Menu" })
 
+-- Hypr App Switcher
+hl.bind("ALT + Tab",         hl.dsp.exec_cmd("qs -p ~/.local/share/hypr-app-switcher ipc call app-switcher next"), { description = "Switch applications on active workspace" })
+hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd("qs -p ~/.local/share/hypr-app-switcher ipc call app-switcher prev"), { description = "Switch applications on active workspace (backwards)" })
+
 -- Example special workspace (scratchpad)
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"), { description = "Toggle special workspace magic" })
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("~/.config/ml4w/scripts/ml4w-toggle-scratchpad-window"), { description = "Toggle window in/out of special workspace magic" })
 
--- Scroll through existing workspaces with mainMod + scroll
-hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { description = "Switch to next workspace" })
-hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }), { description = "Switch to previous workspace" })
+-- Scroll through existing workspaces with mainMod + scroll (throttled to one switch per 200ms)
+hl.config({
+	binds = {
+		pass_mouse_when_bound = false,
+		scroll_event_delay = 1,
+	},
+})
+
+local scroll_locked = false
+
+local function throttled_scroll(dispatcher)
+	return function()
+		if scroll_locked then
+			return
+		end
+
+		scroll_locked = true
+		hl.dispatch(dispatcher)
+
+		hl.timer(function()
+			scroll_locked = false
+		end, {
+			timeout = 200,
+			type = "oneshot",
+		})
+	end
+end
+
+hl.bind(mainMod .. " + mouse_down", throttled_scroll(hl.dsp.focus({ workspace = "e+1" })), { description = "Switch to next workspace" })
+hl.bind(mainMod .. " + mouse_up",   throttled_scroll(hl.dsp.focus({ workspace = "e-1" })), { description = "Switch to previous workspace" })
 
 -- Move/resize windows with mainMod + LMB/RMB and dragging
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true, description = "Move window with the mouse" })
