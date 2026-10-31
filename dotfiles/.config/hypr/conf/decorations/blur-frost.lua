@@ -1,0 +1,39 @@
+-- -----------------------------------------------------
+-- General window decoration
+-- name: "Blur Frost"
+-- Frosted glass blur.
+-- Requires Hyprland >= 0.57
+-- -----------------------------------------------------
+
+hl.config({
+    decoration = {
+        rounding = 10,
+        active_opacity = 0.9,
+        inactive_opacity = 0.6,
+        fullscreen_opacity = 0.9,
+
+        blur = {
+            enabled = true,
+            size = 3,
+            passes = 4,
+            new_optimizations = true,
+            ignore_opacity = true,
+            xray = true,
+            variant = 1, -- frost
+            glass = {
+                refraction = 20,
+                size = 40,
+                roughness = 1,
+            },
+        },
+
+        shadow = {
+            enabled = true,
+            range = 30,
+            render_power = 3,
+            color = "0x66000000",
+        },
+    }
+})
+
+hl.layer_rule({ match = { namespace = "waybar" }, blur = true })
