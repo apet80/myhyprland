@@ -28,10 +28,10 @@ hl.on("hyprland.start", function ()
     -- Start waybar
     hl.exec_cmd(HOME .. "/.config/waybar/launch.sh")
 
-    -- Start polkit agent: KDE agent (pairs with pam_kwallet). Upstream's
-    -- hyprpolkitagent/polkit-gnome chain is not used -- running two agents
-    -- causes duplicate auth dialogs.
-    hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
+    -- Start polkit agent: hyprpolkitagent, falling back to the KDE agent if
+    -- the service is unavailable. Only one agent may run -- two agents
+    -- cause duplicate auth dialogs.
+    hl.exec_cmd("systemctl --user start hyprpolkitagent.service 2>/dev/null || /usr/lib/polkit-kde-authentication-agent-1 || true")
 
     -- Restore wallpaper (skip for quickshell — handled inside ml4w-autostart)
     if wallpaper_app ~= "quickshell" then
