@@ -42,3 +42,11 @@ hl.config({
 })
 
 hl.layer_rule({ match = { namespace = "waybar" }, blur = true })
+
+-- Keep the focused window free of the blur effect: no blur, fully opaque
+hl.window_rule({
+    name    = "blur-variant-focused-window",
+    match   = { focus = true },
+    no_blur = true,
+    opaque  = true,
+})
