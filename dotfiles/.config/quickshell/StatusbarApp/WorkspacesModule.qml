@@ -18,10 +18,17 @@ RowLayout {
     // added or removed.
     property var navButtons: []
 
+    // Called via Qt.callLater: a new workspaceIds array makes the Repeater rebuild
+    // every delegate, and itemAdded/itemRemoved fire mid-rebuild while some
+    // itemAt() slots are still null. Deferring coalesces those into one rebuild
+    // after the Repeater has settled; nulls are skipped just in case.
     function rebuildNavButtons(): void {
         let a = []
-        for (let i = 0; i < rep.count; i++)
-            a.push(rep.itemAt(i))
+        for (let i = 0; i < rep.count; i++) {
+            let b = rep.itemAt(i)
+            if (b)
+                a.push(b)
+        }
         wsRoot.navButtons = a
     }
 
@@ -53,8 +60,8 @@ RowLayout {
         id: rep
         model: wsRoot.workspaceIds
 
-        onItemAdded: wsRoot.rebuildNavButtons()
-        onItemRemoved: wsRoot.rebuildNavButtons()
+        onItemAdded: Qt.callLater(wsRoot.rebuildNavButtons)
+        onItemRemoved: Qt.callLater(wsRoot.rebuildNavButtons)
 
         delegate: Rectangle {
             id: ws

@@ -789,8 +789,11 @@ Scope {
             // both when the selection moves and when navItems changes underneath it.
             function applyFocus(): void {
                 let items = root.navItems
+                // Entries can be null briefly: a workspace button destroyed before
+                // navItems is rebuilt reads back as null.
                 for (let i = 0; i < items.length; i++)
-                    items[i].focused = (i === root.focusIndex)
+                    if (items[i])
+                        items[i].focused = (i === root.focusIndex)
             }
 
             onFocusIndexChanged: applyFocus()
@@ -824,7 +827,7 @@ Scope {
                 if (root.focusIndex < 0 || root.focusIndex >= root.navItems.length)
                     return
                 let m = root.navItems[root.focusIndex]
-                if (typeof m.step === "function")
+                if (m && typeof m.step === "function")
                     m.step(dir)
             }
 
