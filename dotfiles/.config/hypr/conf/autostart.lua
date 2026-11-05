@@ -22,6 +22,9 @@ hl.on("hyprland.start", function ()
     -- Load cursor
     hl.exec_cmd("hyprctl setcursor Bibata-Modern-Ice 24")
 
+    -- Load hyprpm plugins (e.g. hypr-dynamic-cursors); -n notifies on failure
+    hl.exec_cmd("hyprpm reload -n")
+
     -- Start listeners
     hl.exec_cmd("~/.config/ml4w/listeners.sh --startall")
 

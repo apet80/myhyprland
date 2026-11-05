@@ -36,6 +36,9 @@ require("conf.windowrule")
 require("conf.animation")
 require("conf.ml4w")
 
+-- PLUGINS
+require("conf.plugins")
+
 -- HYPRMOD
 require("hyprland-gui")
 
