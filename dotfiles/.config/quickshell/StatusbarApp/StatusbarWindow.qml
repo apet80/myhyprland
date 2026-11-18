@@ -66,9 +66,11 @@ Scope {
     // (read-only home, no permissions) does not retry on every reload.
     property bool seeded: false
 
-    // The settings file. Changes made by hand are not picked up automatically;
-    // trigger a re-read explicitly with
+    // The settings file. It is watched, so edits made by hand (or by another
+    // tool) are re-read and applied automatically; a re-read can still be
+    // forced with
     //   qs ipc call statusbar reload
+    // The bar's own writes (setText) trigger one extra, harmless reload.
     // printErrors is off so a missing file does not log an error before it has
     // been created.
     FileView {
@@ -92,7 +94,7 @@ Scope {
             statusbarScope.applySettings()
             statusbarScope.ready = true
         }
-        onFileChanged: { reload() } 
+        onFileChanged: reload()
     }
 
     // Creates ~/.config/ml4w-statusbar/config.json when it is missing — FileView

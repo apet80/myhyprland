@@ -17,21 +17,10 @@ ShellRoot {
             Theme.reloadTheme()
         }
     }
-    
-    Variants {
-        model: Quickshell.screens
-
-        Scope { 
-        id: perScreen
-        required property var modelData
-
-        StatusbarWindow { screen: perScreen.modelData }
-
-        }
-    }
 
     WelcomeWindow {}
     SidebarWindow {}
     WallpaperWindow {}
     WallpaperCarousel {}
+    StatusbarWindow {}
 }
