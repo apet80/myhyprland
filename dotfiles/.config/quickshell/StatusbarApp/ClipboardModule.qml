@@ -1,5 +1,4 @@
 import Quickshell
-import Quickshell.Io
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -10,13 +9,14 @@ import qs.CustomTheme
 // script as SUPER + V and the Waybar module), which is walker or rofi
 // depending on the selected launcher.
 //
-// The count is refreshed right after every clipboard change (wl-paste --watch)
-// and additionally polled, because deleting entries or wiping the history in
-// the clipboard manager does not touch the clipboard itself.
+// The count itself is kept on the statusbar Scope (clipboardCount in
+// StatusbarWindow.qml) so one watcher/poll and one `clipboard` IpcHandler serve
+// every monitor's bar; this module only displays it.
 Rectangle {
     id: clipboard
 
-    // Number of entries in the clipboard history of the launcher in use.
+    // Number of entries in the clipboard history of the launcher in use; bound
+    // to statusbarScope.clipboardCount by StatusbarWindow.
     property int count: 0
     // Set by the keyboard navigation in StatusbarWindow.
     property bool focused: false
@@ -25,11 +25,6 @@ Rectangle {
     function activate(): void {
         Quickshell.execDetached(["bash", "-c",
             Quickshell.env("HOME") + "/.config/ml4w/scripts/ml4w-cliphist"])
-    }
-
-    function refresh(): void {
-        countProc.running = false
-        countProc.running = true
     }
 
     readonly property bool active: mouseArea.containsMouse || clipboard.focused
@@ -88,53 +83,5 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: clipboard.activate()
-    }
-
-    // Count the history entries of the launcher in use: walker keeps its
-    // history in elephant (one JSON line per item), rofi uses cliphist (one
-    // line per item). The launcher is resolved on every count, so switching it
-    // in the settings is picked up without a reload.
-    Process {
-        id: countProc
-        command: ["bash", "-c",
-            "if [ \"$(\"$HOME\"/.config/ml4w/scripts/ml4w-launcher which)\" = walker ]; then "
-            + "timeout 3 elephant query --json 'clipboard;;100000' 2>/dev/null | grep -c '\"identifier\"'; "
-            + "else cliphist list 2>/dev/null | wc -l; fi"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: clipboard.count = parseInt(this.text.trim()) || 0
-        }
-    }
-
-    // Prints a line on every clipboard change. The recount is delayed a moment
-    // so elephant (walker) or the `wl-paste --watch cliphist store` from
-    // autostart (rofi) has stored the new entry first.
-    Process {
-        id: watchProc
-        command: ["wl-paste", "--watch", "echo", "changed"]
-        running: true
-        stdout: SplitParser {
-            onRead: _ => recountDelay.restart()
-        }
-    }
-
-    Timer {
-        id: recountDelay
-        interval: 300
-        onTriggered: clipboard.refresh()
-    }
-
-    // Picks up deletions/wipes made in the clipboard manager.
-    Timer {
-        interval: 5000
-        running: true
-        repeat: true
-        onTriggered: clipboard.refresh()
-    }
-
-    // `qs ipc call clipboard refresh` recounts on demand.
-    IpcHandler {
-        target: "clipboard"
-        function refresh(): void { clipboard.refresh() }
     }
 }

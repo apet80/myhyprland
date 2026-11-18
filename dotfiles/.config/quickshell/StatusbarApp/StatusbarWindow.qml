@@ -296,6 +296,68 @@ Scope {
         function refresh(): void { statusbarScope.refreshUpdates() }
     }
 
+    // --- SHARED CLIPBOARD-HISTORY COUNT ---
+    // Kept here for the same reason as the update count above: one
+    // `wl-paste --watch`, one poll and one `clipboard` IpcHandler for all bars
+    // instead of one per monitor's ClipboardModule.
+    //
+    // The count is refreshed right after every clipboard change and
+    // additionally polled, because deleting entries or wiping the history in
+    // the clipboard manager does not touch the clipboard itself.
+    property int clipboardCount: 0
+
+    function refreshClipboard(): void {
+        clipboardCountProc.running = false
+        clipboardCountProc.running = true
+    }
+
+    // Count the history entries of the launcher in use: walker keeps its
+    // history in elephant (one JSON line per item), rofi uses cliphist (one
+    // line per item). The launcher is resolved on every count, so switching it
+    // in the settings is picked up without a reload.
+    Process {
+        id: clipboardCountProc
+        command: ["bash", "-c",
+            "if [ \"$(\"$HOME\"/.config/ml4w/scripts/ml4w-launcher which)\" = walker ]; then "
+            + "timeout 3 elephant query --json 'clipboard;;100000' 2>/dev/null | grep -c '\"identifier\"'; "
+            + "else cliphist list 2>/dev/null | wc -l; fi"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: statusbarScope.clipboardCount = parseInt(this.text.trim()) || 0
+        }
+    }
+
+    // Prints a line on every clipboard change. The recount is delayed a moment
+    // so elephant (walker) or the `wl-paste --watch cliphist store` from
+    // autostart (rofi) has stored the new entry first.
+    Process {
+        command: ["wl-paste", "--watch", "echo", "changed"]
+        running: true
+        stdout: SplitParser {
+            onRead: _ => clipboardRecountDelay.restart()
+        }
+    }
+
+    Timer {
+        id: clipboardRecountDelay
+        interval: 300
+        onTriggered: statusbarScope.refreshClipboard()
+    }
+
+    // Picks up deletions/wipes made in the clipboard manager.
+    Timer {
+        interval: 5000
+        running: true
+        repeat: true
+        onTriggered: statusbarScope.refreshClipboard()
+    }
+
+    // `qs ipc call clipboard refresh` recounts on demand.
+    IpcHandler {
+        target: "clipboard"
+        function refresh(): void { statusbarScope.refreshClipboard() }
+    }
+
     // --- MONITOR PLACEMENT ---
     // Which monitors get a bar instance, driven by bar.monitors in the settings
     // file:
@@ -560,7 +622,10 @@ Scope {
                 }
             }
             Component { id: cLauncher;   LauncherModule {} }
-            Component { id: cClipboard;  ClipboardModule {} }
+            Component {
+                id: cClipboard
+                ClipboardModule { count: statusbarScope.clipboardCount }
+            }
             // Whether the calendar panel is showing on this monitor's bar. The panel
             // is an information layer of the clock module, drawn inside this window
             // (see CalendarPanel.qml), so the bar carries it rather than depending on
